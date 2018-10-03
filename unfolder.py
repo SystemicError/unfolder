@@ -272,6 +272,8 @@ def link_and_split_triangles(triangles):
     link_all_triangles(triangles)
     polygons = []
     while len(triangles) > 0:
+        print("Starting new polygon " + str(len(polygons)) + ".")
+        print(str(len(triangles)) + " triangles remain.")
         polygon = []
         # use the first one in line as a seed
         triangle = triangles.pop()
@@ -279,31 +281,30 @@ def link_and_split_triangles(triangles):
             break
         else:
             polygon.append(triangle)
-        i = 0
-        while i < len(polygon):
-            print("Examining triangle " + str(i) + " of polygon.")
-            # for each triangle . . .
-            triangle = polygon[i]
-            # check to make sure its neighbors exist and are not already in this polygon or any other
-            for j in range(len(triangle.neighbors)):
-                if triangle.neighbors[j] != None:
-                    if triangle.neighbors[j] in triangles:
-                        # check if adding a neighbor would create a saddle point (add to more than 360 degrees) around a vertex
-                        if forms_saddle_point(triangle, j, polygon):
-                            # if it does, no neighbor goes there
-                            triangle.neighbors[j] = None
-                            print("Neighbor " + str(j) + " forms saddle point.")
-                        else:
-                            # if it doesn't, add it to polygon, remove it from triangles, and repeat
-                            print("No saddle point.")
-                            polygon.append(triangles.pop(triangles.index(triangle.neighbors[j])))
-                            i = -1
-                            break
-                    else:
-                        triangle.neighbors[j] = None
-            i += 1
+        finished = False
+        while not finished:
+            print("Searching for frontier . . .")
+            print(str(len(triangles)) + " triangles remain.")
+            finished = True
+            for triangle in polygon:
+                print("Searching polygon . . .")
+                for j in range(len(triangle.neighbors)):
+                    print("Searching neighbor . . .")
+                    print(str(len(triangles)) + " triangles remain.")
+                    if triangle.neighbors[j] != None and triangle.neighbors[j] in triangles:
+                        print("Neighbor not null or already in polygon . . .")
+                        if not forms_saddle_point(triangle, j, polygon + [triangle.neighbors[j]]):
+                            print("Found new triangle for polygon.")
+                            polygon.append(triangle.neighbors[j])
+                            triangles.pop(triangles.index(triangle.neighbors[j]))
+                            finished = False
         polygons.append(polygon)
         print("Appending new polygon (" + str(len(polygons)) + " total).")
+    # unlink everyone, then link them only to their fellows in their polygon
+    for polygon in polygons:
+        for triangle in polygon:
+            triangle.neighbors = [None, None, None]
+        link_all_triangles(polygon)
     return polygons
 
 def forms_saddle_point(triangle, j, polygon):
@@ -325,7 +326,7 @@ def forms_saddle_point(triangle, j, polygon):
         angle_sum += math.acos(forward_leg.dot_product(rear_leg)/forward_leg.magnitude()/rear_leg.magnitude())
         # move current triangle to the next neighbor around this vertex
         next_triangle = current_triangle.neighbors[neighbor_index]
-        if next_triangle == None or not (next_triangle in polygon):
+        if next_triangle == None or not (next_triangle in polygon) or next_triangle == triangle.neighbors[j]:
             finished = True
         else:
             next_neighbor_index = (next_triangle.neighbors.index(current_triangle) + 2)%3
@@ -348,7 +349,7 @@ def forms_saddle_point(triangle, j, polygon):
         angle_sum += math.acos(forward_leg.dot_product(rear_leg)/forward_leg.magnitude()/rear_leg.magnitude())
         # move current triangle to the next neighbor around this vertex
         next_triangle = current_triangle.neighbors[neighbor_index]
-        if next_triangle == None or not (next_triangle in polygon):
+        if next_triangle == None or not (next_triangle in polygon) or next_triangle == triangle.neighbors[j]:
             finished = True
         else:
             next_neighbor_index = (next_triangle.neighbors.index(current_triangle) + 1)%3
