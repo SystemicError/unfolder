@@ -28,6 +28,8 @@ class Vertex:
         return Vertex(self.x - other.x, self.y - other.y, self.z - other.z)
     def equals(self, other):
         return (self.x == other.x and self.y == other.y and self.z == other.z)
+    def magnitude(self):
+        return (self.x**2 + self.y**2 + self.z**2)**.5
 
 class Triangle:
     def __init__(self, v0, v1, v2):
@@ -262,28 +264,100 @@ def link_all_triangles(triangles):
                             v1_match = True
                     if v0_match and v1_match:
                         triangle.neighbors[i] = candidate
-                        print("Linking")
     return
 
 def link_and_split_triangles(triangles):
     "Returns several disconnected polygons/tilings that are guaranteed not to self-overlap."
     # first, link everybody.  We'll split neighbors that create saddle points later.
     link_all_triangles(triangles)
-    return [triangles] #temp
     polygons = []
     while len(triangles) > 0:
         polygon = []
         # use the first one in line as a seed
-        polygon.append(triangles.pop())
-        # for each tile . . .
-        for triangle in polygon:
-            pass
-            # check to make sure its neighbors exist and are not already in this polygon
-            # check if adding a neighbor would create a saddle point (add to more than 360 degrees) around a vertex
-        # if it does, no neighbor goes there
-        # if it doesn't, add it and repeat
+        triangle = triangles.pop()
+        if triangle == None:
+            break
+        else:
+            polygon.append(triangle)
+        i = 0
+        while i < len(polygon):
+            print("Examining triangle " + str(i) + " of polygon.")
+            # for each triangle . . .
+            triangle = polygon[i]
+            # check to make sure its neighbors exist and are not already in this polygon or any other
+            for j in range(len(triangle.neighbors)):
+                if triangle.neighbors[j] != None:
+                    if triangle.neighbors[j] in triangles:
+                        # check if adding a neighbor would create a saddle point (add to more than 360 degrees) around a vertex
+                        if forms_saddle_point(triangle, j, polygon):
+                            # if it does, no neighbor goes there
+                            triangle.neighbors[j] = None
+                            print("Neighbor " + str(j) + " forms saddle point.")
+                        else:
+                            # if it doesn't, add it to polygon, remove it from triangles, and repeat
+                            print("No saddle point.")
+                            polygon.append(triangles.pop(triangles.index(triangle.neighbors[j])))
+                            i = -1
+                            break
+                    else:
+                        triangle.neighbors[j] = None
+            i += 1
         polygons.append(polygon)
+        print("Appending new polygon (" + str(len(polygons)) + " total).")
     return polygons
+
+def forms_saddle_point(triangle, j, polygon):
+    "Returns true if triangle (element of polygon) would gain saddle point by adding its jth neighbor"
+    if not (triangle in polygon):
+        print("Undefined precondition for forms_saddle_point().")
+        exit(1)
+    # counterclockwise case
+    angle_sum = 0.0
+    current_triangle = triangle.neighbors[j]
+    neighbor_index = current_triangle.neighbors.index(triangle) # we have to start with the proposed neighbor and go backward
+    finished = False
+    while not finished:
+        # establish some shorthand
+        pivot_vertex = current_triangle.vertices[(neighbor_index + 2)%3]
+        forward_leg = current_triangle.vertices[(neighbor_index + 1)%3].minus(pivot_vertex)
+        rear_leg = current_triangle.vertices[neighbor_index].minus(pivot_vertex)
+        # add the angle of our current triangle
+        angle_sum += math.acos(forward_leg.dot_product(rear_leg)/forward_leg.magnitude()/rear_leg.magnitude())
+        # move current triangle to the next neighbor around this vertex
+        next_triangle = current_triangle.neighbors[neighbor_index]
+        if next_triangle == None or not (next_triangle in polygon):
+            finished = True
+        else:
+            next_neighbor_index = (next_triangle.neighbors.index(current_triangle) + 2)%3
+            current_triangle = next_triangle
+            neighbor_index = next_neighbor_index
+    if angle_sum > 2*math.pi:
+        return True
+
+    #clockwise case
+    angle_sum = 0.0
+    current_triangle = triangle.neighbors[j]
+    neighbor_index = current_triangle.neighbors.index(triangle) # we have to start with the proposed neighbor and go backward
+    finished = False
+    while not finished:
+        # establish some shorthand
+        pivot_vertex = current_triangle.vertices[(neighbor_index + 1)%3]
+        forward_leg = current_triangle.vertices[(neighbor_index + 2)%3].minus(pivot_vertex)
+        rear_leg = current_triangle.vertices[neighbor_index].minus(pivot_vertex)
+        # add the angle of our current triangle
+        angle_sum += math.acos(forward_leg.dot_product(rear_leg)/forward_leg.magnitude()/rear_leg.magnitude())
+        # move current triangle to the next neighbor around this vertex
+        next_triangle = current_triangle.neighbors[neighbor_index]
+        if next_triangle == None or not (next_triangle in polygon):
+            finished = True
+        else:
+            next_neighbor_index = (next_triangle.neighbors.index(current_triangle) + 1)%3
+            current_triangle = next_triangle
+            neighbor_index = next_neighbor_index
+    if angle_sum > 2*math.pi:
+        return True
+
+    return False
 
 def get_triangles_from_file(path, scale):
     my_mesh = mesh.Mesh.from_file(path)
@@ -307,7 +381,6 @@ def get_triangles_from_file(path, scale):
     return triangles
 
 def main(argv):
-
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, PX_WIDTH, PX_HEIGHT)
     cr = cairo.Context(surface)
 
@@ -322,15 +395,15 @@ def main(argv):
 
     polygons = link_and_split_triangles(triangles)
 
-    print(polygons[0][33].neighbors)
-    for triangles in polygons:
+    print(polygons[0][0].neighbors)
+    for triangles in polygons[0:1]:
         path = "preelevation.png"
         draw_template(cr, triangles)
         draw_neighborhoods(cr, triangles)
         surface.write_to_png(path)
     
-        #rotate_triangles_to_plane(triangles)
-        #draw_template(cr, triangles)
+        rotate_triangles_to_plane(triangles)
+        draw_template(cr, triangles)
 
 
         path = "unfolded.png"
