@@ -160,6 +160,11 @@ def midpoint(v0, v1, coords):
         return mid
 
 def rotate_triangles_to_plane(triangles):
+    "Flatten all triangles into the plane, arranging them with neighbors.  When conflicts (saddle points, overlaps) arise, partition triangles into separate polygons and return those polygons."
+    if len(triangles) == 0:
+        return []
+    for t in triangles:
+        t.visited = False
     # starting with triangles[0] as seed, use breadth-first web traversal
     # and flatten into plane
 
@@ -170,6 +175,7 @@ def rotate_triangles_to_plane(triangles):
     # recur on its unvisited neighbors
     triangles[0].visited = True
     frontier = [triangles[0]]
+    polygon = [triangles[0]]
     while len(frontier) > 0:
         new_frontier = []
         for triangle in frontier:
@@ -178,11 +184,17 @@ def rotate_triangles_to_plane(triangles):
                     self_index = neighbor.get_neighbor_index(triangle)
                     neighbor.align_to_neighbor(self_index)
                     neighbor.visited = True
-                    new_frontier.append(neighbor)
+                    if not overlap(neighbor, polygon):
+                        polygon.append(neighbor)
+                        new_frontier.append(neighbor)
         frontier = new_frontier
 
 
-    return
+    return [polygon] + rotate_triangles_to_plane([t for t in triangles if not (t in polygon)])
+
+def overlap(triangle, polygon):
+    "Returns true if triangle in its current position overlaps polygon."
+    return True
 
 def draw_triangles(cr, center, triangles):
         cr.set_source_rgb(0.0, 0.0, 0.0)
@@ -394,20 +406,19 @@ def main(argv):
         scale = float(argv[2])
     triangles = get_triangles_from_file(argv[1], scale)
 
-    polygons = link_and_split_triangles(triangles)
+    link_all_triangles(triangles)
 
-    print(polygons[0][0].neighbors)
-    for triangles in polygons[0:1]:
-        path = "preelevation.png"
+    path = "folded.png"
+    draw_template(cr, triangles)
+    draw_neighborhoods(cr, triangles)
+    surface.write_to_png(path)
+
+    print("Rotating to plane . . .")
+    polygons = rotate_triangles_to_plane(triangles)
+    print(". . . rotation to plane complete.  Created " + str(len(polygons)) + " polygonal partitions.")
+    for triangles in polygons:
         draw_template(cr, triangles)
-        draw_neighborhoods(cr, triangles)
-        surface.write_to_png(path)
-    
-        rotate_triangles_to_plane(triangles)
-        draw_template(cr, triangles)
-
-
-        path = "unfolded.png"
+        path = "unfolded_" + str(polygons.index(triangles)) + ".png"
         surface.write_to_png(path)
 
 if __name__ == "__main__":
