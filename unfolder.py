@@ -7,6 +7,7 @@ import math
 import cairo
 import sys
 import itertools
+import random
 from stl import mesh
 from copy import copy
 
@@ -198,9 +199,10 @@ def rotate_triangles_to_plane(triangles):
         t.flatten()
 
     # recur on its unvisited neighbors
-    triangles[0].visited = True
-    frontier = [triangles[0]]
-    polygon = [triangles[0]]
+    selection = random.randint(0, len(triangles) - 1)
+    triangles[selection].visited = True
+    frontier = [triangles[selection]]
+    polygon = [triangles[selection]]
     while len(frontier) > 0:
         new_frontier = []
         for triangle in frontier:
@@ -350,7 +352,7 @@ def link_and_split_triangles(triangles):
 def forms_saddle_point(triangle, j, polygon):
     "Returns true if triangle (element of polygon) would gain saddle point by adding its jth neighbor"
     if not (triangle in polygon):
-        print("Undefined precondition for forms_saddle_point().")
+        sys.stderr.write("Undefined precondition for forms_saddle_point().")
         exit(1)
     # counterclockwise case
     angle_sum = 0.0
@@ -426,7 +428,7 @@ def main(argv):
     cr = cairo.Context(surface)
 
     if len(argv) < 2:
-        print("Need .stl argument.")
+        sys.stderr.write("Need .stl argument.")
         exit(1)
 
     scale = 1.0
@@ -444,9 +446,11 @@ def main(argv):
     print("Rotating to plane . . .")
     polygons = rotate_triangles_to_plane(triangles)
     print(". . . rotation to plane complete.  Created " + str(len(polygons)) + " polygonal partitions.")
+
     for triangles in polygons:
         draw_template(cr, triangles)
-        path = "unfolded_" + str(polygons.index(triangles)) + ".png"
+        path = "unfolded_" + "{:03d}".format(polygons.index(triangles)) + ".png"
+        print("Rendering polygon " + str(polygons.index(triangles)) + " . . .")
         surface.write_to_png(path)
 
 if __name__ == "__main__":
