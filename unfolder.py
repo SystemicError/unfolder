@@ -141,6 +141,31 @@ class Triangle:
         vertices[2].y = (side_0_2**2 - vertices[2].x**2)**.5
         vertices[2].z = 0.0
         return
+    def overlaps(self, other):
+        "Returns true if the interiors of the projections of these triangles onto the xy plane overlap."
+        # to do this, check if each side of self intersects any side of other
+        # if they have exactly one intersection (read:  not parallel), these triangles overlap.
+        for i in range(3):
+            # form a parameterize of self's side with t ranging from 0 to 1
+            point0 = self.vertices[i]
+            vector0 = self.vertices[(i + 1)%3].minus(point0)
+            for j in range(3):
+                # parameterize other by the same rule
+                point1 = other.vertices[j]
+                vector1 = other.vertices[(j + 1)%3].minus(point1)
+                # solve for a t wherein the intersect, if possible
+                # try to invert the matrix whose columns are v0, v1, then multiply against p0-p1.
+                # The result should be the column vector (-t0, t1).
+                determinant = vector0.x*vector1.y - vector0.y*vector1.x
+                if determinant != 0:
+                    # we've determined that they are not parallel or identical lines
+                    px = point0.x - point1.x
+                    py = point0.y - point1.y
+                    t0 = -(vector1.y*px - vector1.x*py)/determinant
+                    t1 = (-vector0.y*px + vector0.x*py)/determinant
+                    if t0 > 0 and t0 < 1.0 and t1 > 0 and t1 < 1.0:
+                        return True
+        return False
 
 def midpoint(v0, v1, coords):
     "Gives the 2d midpoint of two vertices based on current coordinate system."
@@ -194,7 +219,10 @@ def rotate_triangles_to_plane(triangles):
 
 def overlap(triangle, polygon):
     "Returns true if triangle in its current position overlaps polygon."
-    return True
+    for t in polygon:
+        if t.overlaps(triangle):
+            return True
+    return False
 
 def draw_triangles(cr, center, triangles):
         cr.set_source_rgb(0.0, 0.0, 0.0)
