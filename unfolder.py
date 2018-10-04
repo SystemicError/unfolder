@@ -142,7 +142,7 @@ class Triangle:
         vertices[2].y = (side_0_2**2 - vertices[2].x**2)**.5
         vertices[2].z = 0.0
         return
-    def overlaps(self, other):
+    def overlaps(self, other, tolerance = .001):
         "Returns true if the interiors of the projections of these triangles onto the xy plane overlap."
         # to do this, check if each side of self intersects any side of other
         # if they have exactly one intersection (read:  not parallel), these triangles overlap.
@@ -164,7 +164,7 @@ class Triangle:
                     py = point0.y - point1.y
                     t0 = -(vector1.y*px - vector1.x*py)/determinant
                     t1 = (-vector0.y*px + vector0.x*py)/determinant
-                    if t0 > 0 and t0 < 1.0 and t1 > 0 and t1 < 1.0:
+                    if t0 > tolerance and t0 < 1.0 - tolerance and t1 > tolerance and t1 < 1.0 - tolerance:
                         return True
         return False
 
