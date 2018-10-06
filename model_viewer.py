@@ -42,6 +42,14 @@ def draw_projections(triangles, normals, offsets, scale = 1.0):
 
     return
 
+def on_mouse_move():
+    dx, dy = pygame.mouse.get_rel()
+    buttons = pygame.mouse.get_pressed()
+    if buttons[0] == 1:
+        glRotate(dx, 0, 0, 1)
+        glRotate(dy, 1, 0, 0)
+    return
+
 def main(argv):
     if len(argv) < 2:
         sys.stderr.write("Argument expected.")
@@ -58,13 +66,15 @@ def main(argv):
     gluPerspective(35, display[0]/display[1], .01, 500.0)
     glTranslate(0,0,-250)
 
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            elif event.type == pygame.MOUSEMOTION:
+                on_mouse_move()
 
-        glRotate(1, 1, .1, 0)
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
         draw_projections(triangles, normals, offsets, scale)
         pygame.display.flip()
