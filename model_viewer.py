@@ -28,7 +28,11 @@ def get_triangle_color(normal):
             rgb[j] =.5 
     return rgb
 
-def draw_projections(triangles, normals, offsets, scale = 1.0):
+def draw_projections(triangles, normals, offsets, scale = 1.0, flip = False):
+    if flip:
+        zsign = -1
+    else:
+        zsign = 1
     glBegin(GL_TRIANGLES)
     for i in range(len(triangles)):
         tri = triangles[i]
@@ -36,7 +40,18 @@ def draw_projections(triangles, normals, offsets, scale = 1.0):
         glColor3fv(get_triangle_color(normals[i]))
         # draw vertices
         for j in range(0, 9, 3):
-            glVertex3fv([tri[j]*scale + offsets[0], tri[j + 1]*scale + offsets[1], tri[j + 2]*scale + offsets[2]])
+            glVertex3fv([tri[j]*scale + offsets[0], tri[j + 1]*scale + offsets[1], zsign*tri[j + 2]*scale + zsign*offsets[2]])
+
+    glEnd()
+
+    glBegin(GL_LINES)
+    glColor3fv([0.,0.,1.])
+    for i in range(len(triangles)):
+        tri = triangles[i]
+        # draw vertices
+        glVertex3fv([tri[6]*scale + offsets[0], tri[7]*scale + offsets[1], zsign*tri[8]*scale + zsign*offsets[2]])
+        for j in range(0, 9, 3):
+            glVertex3fv([tri[j]*scale + offsets[0], tri[j + 1]*scale + offsets[1], zsign*tri[j + 2]*scale + zsign*offsets[2]])
 
     glEnd()
 
@@ -55,6 +70,10 @@ def main(argv):
         sys.stderr.write("Argument expected.")
         exit(1)
     triangles, normals = get_triangles_from_file(argv[1])
+    if len(argv) >= 3:
+        flip = True
+    else:
+        flip = False
     scale = 1.0
     offsets = find_offsets(triangles, scale)
 
@@ -76,7 +95,7 @@ def main(argv):
                 on_mouse_move()
 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-        draw_projections(triangles, normals, offsets, scale)
+        draw_projections(triangles, normals, offsets, scale, flip)
         pygame.display.flip()
         pygame.time.wait(1)
     return
