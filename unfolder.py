@@ -185,7 +185,7 @@ def midpoint(v0, v1, coords):
         mid = Vertex(theta, phi, 1.0)
         return mid
 
-def rotate_triangles_to_plane(triangles):
+def rotate_triangles_to_plane(triangles, max_polygon_size):
     "Flatten all triangles into the plane, arranging them with neighbors.  When conflicts (saddle points, overlaps) arise, partition triangles into separate polygons and return those polygons."
     if len(triangles) == 0:
         return []
@@ -211,13 +211,13 @@ def rotate_triangles_to_plane(triangles):
                     self_index = neighbor.get_neighbor_index(triangle)
                     neighbor.align_to_neighbor(self_index)
                     neighbor.visited = True
-                    if not overlap(neighbor, polygon):
+                    if not overlap(neighbor, polygon) and len(polygon) < max_polygon_size:
                         polygon.append(neighbor)
                         new_frontier.append(neighbor)
         frontier = new_frontier
 
 
-    return [polygon] + rotate_triangles_to_plane([t for t in triangles if not (t in polygon)])
+    return [polygon] + rotate_triangles_to_plane([t for t in triangles if not (t in polygon)], max_polygon_size)
 
 def overlap(triangle, polygon):
     "Returns true if triangle in its current position overlaps polygon."
@@ -226,29 +226,39 @@ def overlap(triangle, polygon):
             return True
     return False
 
-def draw_triangles(cr, center, triangles):
+def draw_triangles(cr, center, triangles, draw_guides):
         cr.set_source_rgb(0.0, 0.0, 0.0)
 
         for triangle in triangles:
-            draw_triangle(cr, center, triangle)
+            draw_triangle(cr, center, triangle, draw_guides)
         return
 
-def draw_triangle(cr, center, triangle):
+def draw_triangle(cr, center, triangle, needs_hints):
     vertices = triangle.vertices
-    x0 = center[0] + vertices[0].x
-    y0 = center[1] + vertices[0].y
-    x1 = center[0] + vertices[1].x
-    y1 = center[1] + vertices[1].y
-    x2 = center[0] + vertices[2].x
-    y2 = center[1] + vertices[2].y
-    cr.move_to(x0, y0)
-    cr.line_to(x1, y1)
-    cr.line_to(x2, y2)
-    cr.line_to(x0, y0)
-    cr.stroke()
+    x = [center[0] + vertices[i].x for i in range(3)]
+    y = [center[1] + vertices[i].y for i in range(3)]
+
+    for i in range(3):
+        cr.set_source_rgb(0, 0, 0)
+        cr.move_to(x[(i + 2)%3], y[(i + 2)%3])
+        cr.line_to(x[i%3], y[i%3])
+        cr.stroke()
+        if needs_hints:
+            cr.set_source_rgb(0, 0, 1)
+            cr.move_to((x[(i + 2)%3] + x[i%3])*5/12 + x[(i + 1)%3]/6, (y[(i + 2)%3] + y[i%3])*5/12 + y[(i + 1)%3]/6)
+            cr.set_font_size(20)
+            cr.show_text(str(id(triangle.neighbors[(i + 1)%3])%999))
+            cr.fill()
+
+    if needs_hints:
+        cr.set_source_rgb(1, 0, 0)
+        cr.move_to(sum(x)/3.0, sum(y)/3.0)
+        cr.set_font_size(20)
+        cr.show_text(str(id(triangle)%999))
+        cr.fill()
     return
 
-def draw_template(cr, triangles):
+def draw_template(cr, triangles, draw_guides = False):
     cr.set_source_rgb(1.0, 1.0, 1.0)
     cr.rectangle(0, 0, PX_WIDTH, PX_HEIGHT)
     cr.paint()
@@ -257,7 +267,7 @@ def draw_template(cr, triangles):
     xc, yc = find_template_center(triangles)
     center = (PX_WIDTH*.5 - xc, PX_HEIGHT*.5 - yc)
 
-    draw_triangles(cr, center, triangles)
+    draw_triangles(cr, center, triangles, draw_guides)
     return
 
 def draw_neighborhoods(cr, triangles):
@@ -429,12 +439,17 @@ def main(argv):
 
     if len(argv) < 2:
         sys.stderr.write("Need .stl argument.")
+        sys.stderr.write("Invocation:  unfolder.py [file.stl] [scale factor] [maximum polygon size]")
         exit(1)
 
     scale = 1.0
     if len(argv) >= 3:
         scale = float(argv[2])
     triangles = get_triangles_from_file(argv[1], scale)
+
+    max_polygon_size = 9999
+    if len(argv) >= 4:
+        max_polygon_size = float(argv[3])
 
     link_all_triangles(triangles)
 
@@ -444,13 +459,17 @@ def main(argv):
     surface.write_to_png(path)
 
     print("Rotating to plane . . .")
-    polygons = rotate_triangles_to_plane(triangles)
+    polygons = rotate_triangles_to_plane(triangles, max_polygon_size)
     print(". . . rotation to plane complete.  Created " + str(len(polygons)) + " polygonal partitions.")
 
     for triangles in polygons:
-        draw_template(cr, triangles)
+        draw_template(cr, triangles, False)
         path = "unfolded_" + "{:03d}".format(polygons.index(triangles)) + ".png"
         print("Rendering polygon " + str(polygons.index(triangles)) + " . . .")
+        surface.write_to_png(path)
+        draw_template(cr, triangles, True)
+        path = "hints_" + "{:03d}".format(polygons.index(triangles)) + ".png"
+        print("Rendering hint sheet " + str(polygons.index(triangles)) + " . . .")
         surface.write_to_png(path)
 
 if __name__ == "__main__":
