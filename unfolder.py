@@ -242,13 +242,13 @@ def draw_triangle(cr, center, triangle, needs_hints):
     y = [center[1] + vertices[i].y for i in range(3)]
 
     for i in range(3):
-        if triangle.folds[i] > 0:
+        if triangle.folds[(i+1)%3] > 0:
             r, g, b = 1.0, 0.0, 0.0
-        elif triangle.folds[i] < 0:
+        elif triangle.folds[(i+1)%3] < 0:
             r, g, b = 0.0, 0.0, 1.0
         else:
             r, g, b = 0, 0, 0
-        cr.set_source_rgba(r, g, b, .5)
+        cr.set_source_rgb(r, g, b)
         cr.move_to(x[(i + 2)%3], y[(i + 2)%3])
         cr.line_to(x[i%3], y[i%3])
         cr.stroke()
@@ -326,6 +326,13 @@ def link_all_triangles(triangles):
                     if v0_match and v1_match:
                         triangle.neighbors[i] = candidate
                         triangle.folds[i] = compute_fold(triangle, i)
+                        #test code
+                        n = candidate.get_neighbor_index(triangle)
+                        if candidate.folds[n] != None and candidate.folds[n] != triangle.folds[i]:
+                            print("Noncommutative fold computation:")
+                            print("This triangle:  " + str(triangle))
+                            print("Neighbor:  " + str(candidate))
+                            exit(1)
     return
 
 def compute_fold(triangle, n, tolerance = .01):
