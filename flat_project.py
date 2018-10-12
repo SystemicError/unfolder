@@ -1,6 +1,7 @@
 import numpy
 from stl import mesh
 import cairo
+import sys
 
 def get_triangles_from_file(path):
     my_mesh = mesh.Mesh.from_file(path)
@@ -44,5 +45,5 @@ def draw_projection(path, triangles, normals, WIDTH, HEIGHT, scale, offsets, x_d
     return
 
 
-triangles, normals = get_triangles_from_file("bunny.stl")
-draw_projections("bunny", triangles, normals, 1024, 768, 6.0)
+triangles, normals = get_triangles_from_file(sys.argv[1] + ".stl")
+draw_projections(sys.argv[1], triangles, normals, 1024, 768, 6.0)

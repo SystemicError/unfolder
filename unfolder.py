@@ -23,6 +23,8 @@ class Vertex:
         return "(" + str(self.x) + ", " + str(self.y) + ", " + str(self.z) + ")"
     def dot_product(self, other):
         return self.x*other.x + self.y*other.y + self.z*other.z
+    def cross_product(self, other):
+        return Vertex(self.y*other.z - self.z*other.y, self.z*other.x - self.x*other.z, self.x*other.y - self.y*other.x)
     def distance_from(self, other):
         return ((self.x - other.x)**2 + (self.y - other.y)**2 + (self.z - other.z)**2)**.5
     def minus(self, other):
@@ -241,12 +243,12 @@ def draw_triangle(cr, center, triangle, needs_hints):
 
     for i in range(3):
         if triangle.folds[i] > 0:
-            r, g, b = 1-triangle.folds[i], 0.0, 0.0
+            r, g, b = 1.0, 0.0, 0.0
         elif triangle.folds[i] < 0:
-            r, g, b = 0.0, 0.0, 1+triangle.folds[i]
+            r, g, b = 0.0, 0.0, 1.0
         else:
             r, g, b = 0, 0, 0
-        cr.set_source_rgb(r, g, b)
+        cr.set_source_rgba(r, g, b, .5)
         cr.move_to(x[(i + 2)%3], y[(i + 2)%3])
         cr.line_to(x[i%3], y[i%3])
         cr.stroke()
@@ -254,14 +256,14 @@ def draw_triangle(cr, center, triangle, needs_hints):
             cr.set_source_rgb(0, 0, 1)
             cr.move_to((x[(i + 2)%3] + x[i%3])*5/12 + x[(i + 1)%3]/6, (y[(i + 2)%3] + y[i%3])*5/12 + y[(i + 1)%3]/6)
             cr.set_font_size(20)
-            cr.show_text(str(id(triangle.neighbors[(i + 1)%3])%999))
+            cr.show_text(hex(id(triangle.neighbors[(i + 1)%3])%65536)[2:])
             cr.fill()
 
     if needs_hints:
         cr.set_source_rgb(1, 0, 0)
         cr.move_to(sum(x)/3.0, sum(y)/3.0)
         cr.set_font_size(20)
-        cr.show_text(str(id(triangle)%999))
+        cr.show_text(hex(id(triangle)%65536)[2:])
         cr.fill()
     return
 
@@ -323,102 +325,22 @@ def link_all_triangles(triangles):
                             v1_match = True
                     if v0_match and v1_match:
                         triangle.neighbors[i] = candidate
-                        triangle.folds[i] = triangle.get_normal().dot_product(candidate.get_normal())
+                        triangle.folds[i] = compute_fold(triangle, i)
     return
 
-def link_and_split_triangles(triangles):
-    "Returns several disconnected polygons/tilings that are guaranteed not to self-overlap."
-    # first, link everybody.  We'll split neighbors that create saddle points later.
-    link_all_triangles(triangles)
-    polygons = []
-    while len(triangles) > 0:
-        print("Starting new polygon " + str(len(polygons)) + ".")
-        print(str(len(triangles)) + " triangles remain.")
-        polygon = []
-        # use the first one in line as a seed
-        triangle = triangles.pop()
-        if triangle == None:
-            break
-        else:
-            polygon.append(triangle)
-        finished = False
-        while not finished:
-            print("Searching for frontier . . .")
-            print(str(len(triangles)) + " triangles remain.")
-            finished = True
-            for triangle in polygon:
-                print("Searching polygon . . .")
-                for j in range(len(triangle.neighbors)):
-                    print("Searching neighbor . . .")
-                    print(str(len(triangles)) + " triangles remain.")
-                    if triangle.neighbors[j] != None and triangle.neighbors[j] in triangles:
-                        print("Neighbor not null or already in polygon . . .")
-                        if not forms_saddle_point(triangle, j, polygon + [triangle.neighbors[j]]):
-                            print("Found new triangle for polygon.")
-                            polygon.append(triangle.neighbors[j])
-                            triangles.pop(triangles.index(triangle.neighbors[j]))
-                            finished = False
-        polygons.append(polygon)
-        print("Appending new polygon (" + str(len(polygons)) + " total).")
-    # unlink everyone, then link them only to their fellows in their polygon
-    for polygon in polygons:
-        for triangle in polygon:
-            triangle.neighbors = [None, None, None]
-        link_all_triangles(polygon)
-    return polygons
-
-def forms_saddle_point(triangle, j, polygon):
-    "Returns true if triangle (element of polygon) would gain saddle point by adding its jth neighbor"
-    if not (triangle in polygon):
-        sys.stderr.write("Undefined precondition for forms_saddle_point().")
-        exit(1)
-    # counterclockwise case
-    angle_sum = 0.0
-    current_triangle = triangle.neighbors[j]
-    neighbor_index = current_triangle.neighbors.index(triangle) # we have to start with the proposed neighbor and go backward
-    finished = False
-    while not finished:
-        # establish some shorthand
-        pivot_vertex = current_triangle.vertices[(neighbor_index + 2)%3]
-        forward_leg = current_triangle.vertices[(neighbor_index + 1)%3].minus(pivot_vertex)
-        rear_leg = current_triangle.vertices[neighbor_index].minus(pivot_vertex)
-        # add the angle of our current triangle
-        angle_sum += math.acos(forward_leg.dot_product(rear_leg)/forward_leg.magnitude()/rear_leg.magnitude())
-        # move current triangle to the next neighbor around this vertex
-        next_triangle = current_triangle.neighbors[neighbor_index]
-        if next_triangle == None or not (next_triangle in polygon) or next_triangle == triangle.neighbors[j]:
-            finished = True
-        else:
-            next_neighbor_index = (next_triangle.neighbors.index(current_triangle) + 2)%3
-            current_triangle = next_triangle
-            neighbor_index = next_neighbor_index
-    if angle_sum > 2*math.pi:
-        return True
-
-    #clockwise case
-    angle_sum = 0.0
-    current_triangle = triangle.neighbors[j]
-    neighbor_index = current_triangle.neighbors.index(triangle) # we have to start with the proposed neighbor and go backward
-    finished = False
-    while not finished:
-        # establish some shorthand
-        pivot_vertex = current_triangle.vertices[(neighbor_index + 1)%3]
-        forward_leg = current_triangle.vertices[(neighbor_index + 2)%3].minus(pivot_vertex)
-        rear_leg = current_triangle.vertices[neighbor_index].minus(pivot_vertex)
-        # add the angle of our current triangle
-        angle_sum += math.acos(forward_leg.dot_product(rear_leg)/forward_leg.magnitude()/rear_leg.magnitude())
-        # move current triangle to the next neighbor around this vertex
-        next_triangle = current_triangle.neighbors[neighbor_index]
-        if next_triangle == None or not (next_triangle in polygon) or next_triangle == triangle.neighbors[j]:
-            finished = True
-        else:
-            next_neighbor_index = (next_triangle.neighbors.index(current_triangle) + 1)%3
-            current_triangle = next_triangle
-            neighbor_index = next_neighbor_index
-    if angle_sum > 2*math.pi:
-        return True
-
-    return False
+def compute_fold(triangle, n, tolerance = .01):
+    "Compute whether triangle and its nth neighbor have hill or valley fold between them."
+    # compute the cross product of triangle normal and neigbhor normal
+    cproduct = triangle.get_normal().cross_product(triangle.neighbors[n].get_normal())
+    if cproduct.magnitude() < tolerance:
+        return 0 # parallel faces (no real fold)
+    # compute the counterclockwise vector along the joining edge
+    edge = triangle.vertices[(n + 2)%3].minus(triangle.vertices[(n + 1)%3])
+    # see if they're parallel or antiparallel
+    if edge.dot_product(cproduct) > 0:
+        return 1.0 #cproduct.magnitude()
+    else:
+        return -1.0 #cproduct.magnitude()
 
 def get_triangles_from_file(path, scale):
     my_mesh = mesh.Mesh.from_file(path)
