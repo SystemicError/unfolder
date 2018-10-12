@@ -36,6 +36,7 @@ class Triangle:
     def __init__(self, v0, v1, v2):
         self.vertices = [v0, v1, v2]
         self.neighbors = [None, None, None]
+        self.folds = [None, None, None]
         self.visited = False
         self.id = ""
     def __str__(self):
@@ -55,11 +56,11 @@ class Triangle:
             neighbor_string = neighbor_string + "[" + str(self.neighbors[2].vertices[0]) + ", " + str(self.neighbors[2].vertices[1]) + ", " + str(self.neighbors[2].vertices[2]) + "]]"
         return "Triangle:\n" + vertex_string + "\n" + neighbor_string
     def get_normal(self):
-        "on the assumption that v0 through v2 are counterclockwise, return normal vector"
+        "on the assumption that v0 through v2 are counterclockwise, return unit normal vector"
         a = self.vertices[1].minus(self.vertices[0])
         b = self.vertices[2].minus(self.vertices[0])
         normal = Vertex(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x)
-        return normal
+        return Vertex(normal.x/normal.magnitude(), normal.y/normal.magnitude(), normal.z/normal.magnitude())
     def translate_to_origin(self, n):
         x = self.vertices[n].x
         y = self.vertices[n].y
@@ -239,7 +240,13 @@ def draw_triangle(cr, center, triangle, needs_hints):
     y = [center[1] + vertices[i].y for i in range(3)]
 
     for i in range(3):
-        cr.set_source_rgb(0, 0, 0)
+        if triangle.folds[i] > 0:
+            r, g, b = 1-triangle.folds[i], 0.0, 0.0
+        elif triangle.folds[i] < 0:
+            r, g, b = 0.0, 0.0, 1+triangle.folds[i]
+        else:
+            r, g, b = 0, 0, 0
+        cr.set_source_rgb(r, g, b)
         cr.move_to(x[(i + 2)%3], y[(i + 2)%3])
         cr.line_to(x[i%3], y[i%3])
         cr.stroke()
@@ -316,6 +323,7 @@ def link_all_triangles(triangles):
                             v1_match = True
                     if v0_match and v1_match:
                         triangle.neighbors[i] = candidate
+                        triangle.folds[i] = triangle.get_normal().dot_product(candidate.get_normal())
     return
 
 def link_and_split_triangles(triangles):
