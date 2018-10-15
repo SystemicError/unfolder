@@ -255,15 +255,15 @@ def draw_triangle(cr, center, triangle, needs_hints):
         if needs_hints:
             cr.set_source_rgb(0, 0, 1)
             cr.move_to((x[(i + 2)%3] + x[i%3])*5/12 + x[(i + 1)%3]/6, (y[(i + 2)%3] + y[i%3])*5/12 + y[(i + 1)%3]/6)
-            cr.set_font_size(20)
-            cr.show_text(hex(id(triangle.neighbors[(i + 1)%3])%65536)[2:])
+            cr.set_font_size(30)
+            cr.show_text(str(triangle.neighbors[(i + 1)%3].id))
             cr.fill()
 
     if needs_hints:
         cr.set_source_rgb(1, 0, 0)
         cr.move_to(sum(x)/3.0, sum(y)/3.0)
-        cr.set_font_size(20)
-        cr.show_text(hex(id(triangle)%65536)[2:])
+        cr.set_font_size(30)
+        cr.show_text(str(triangle.id))
         cr.fill()
     return
 
