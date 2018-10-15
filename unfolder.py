@@ -40,7 +40,7 @@ class Triangle:
         self.neighbors = [None, None, None]
         self.folds = [None, None, None]
         self.visited = False
-        self.id = ""
+        self.id = None
     def __str__(self):
         vertex_string = "vertices[" + str(self.vertices[0]) + ", " + str(self.vertices[1]) + ", " + str(self.vertices[2]) + "]"
         neighbor_string = "neighbors["
@@ -365,8 +365,9 @@ def get_triangles_from_file(path, scale):
         normal = my_mesh.normals[i]
         if normal[0]*computed_normal.x + normal[1]*computed_normal.y + normal[2]*computed_normal.z < 0:
             # if not, change the order so it does
-            v0 = Vertex[point0[0], point0[2], point0[1]]
+            triangle = Triangle(v0, v2, v1)
             print("Reversing triangle " + str(i) + " orientation.")
+        triangle.id = i
         triangles.append(triangle)
     return triangles
 
