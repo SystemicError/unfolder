@@ -254,7 +254,7 @@ def draw_triangle(cr, center, triangle, needs_hints):
         cr.move_to(x[(i + 2)%3], y[(i + 2)%3])
         cr.line_to(x[i%3], y[i%3])
         cr.stroke()
-        if needs_hints:
+        if needs_hints and triangle.neighbors[(i + 1)%3] != None:
             cr.set_source_rgb(0, 0, 1)
             cr.move_to((x[(i + 2)%3] + x[i%3])*5/12 + x[(i + 1)%3]/6, (y[(i + 2)%3] + y[i%3])*5/12 + y[(i + 1)%3]/6)
             cr.set_font_size(30)
