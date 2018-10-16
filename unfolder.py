@@ -170,6 +170,8 @@ class Triangle:
                     if t0 > tolerance and t0 < 1.0 - tolerance and t1 > tolerance and t1 < 1.0 - tolerance:
                         return True
         return False
+    def area(self):
+        return self.vertices[1].minus(self.vertices[0]).cross_product(self.vertices[2].minus(self.vertices[0]))
 
 def midpoint(v0, v1, coords):
     "Gives the 2d midpoint of two vertices based on current coordinate system."
@@ -370,6 +372,8 @@ def get_triangles_from_file(path, scale):
             triangle = Triangle(v0, v2, v1)
             print("Reversing triangle " + str(i) + " orientation.")
         triangle.id = i
+        if triangle.area() == 0:
+            print("Triangle " + str(i) + " has zero area.")
         triangles.append(triangle)
     return triangles
 
