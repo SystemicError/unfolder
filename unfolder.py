@@ -244,7 +244,7 @@ def draw_triangle(cr, center, triangle, needs_hints):
     for i in range(3):
         if triangle.folds[(i+1)%3] == None:
             r, g, b = 0, 0, 0
-        if triangle.folds[(i+1)%3] > 0:
+        elif triangle.folds[(i+1)%3] > 0:
             r, g, b = 1.0, 0.0, 0.0
         elif triangle.folds[(i+1)%3] < 0:
             r, g, b = 0.0, 0.0, 1.0
