@@ -336,7 +336,7 @@ def link_all_triangles(triangles):
                             print("Noncommutative fold computation:")
                             print("This triangle:  " + str(triangle))
                             print("Neighbor:  " + str(candidate))
-                            exit(1)
+                            #exit(1)
     return
 
 def compute_fold(triangle, n, tolerance = .01):
