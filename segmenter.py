@@ -15,7 +15,7 @@ def point_splits_edge(point, endpoint0, endpoint1, tolerance = .001):
     t = vector.dot_product(rel_point)/vector.magnitude()
     if t != rel_point.magnitude():
         return False
-    if t > tolerance or t < 1.0 - tolerance:
+    if t > tolerance and t < 1.0 - tolerance:
         return True
     return False
 
@@ -27,20 +27,26 @@ def split_triangle(triangle, edge, point):
 
 def split_edge_points(triangles):
     "Finds triangles whose edges contain vertices somewhere other than their endpoints and splits them at those vertices."
+    # adding new triangles won't create new vertices, so we don't have to re-check old ones if we're smart about it
     i = 0
     while i < len(triangles):
-        j = 0
+        j = i + 1
         while j < len(triangles):
-            for m in len(triangles[j].vertices):
+            m = 0
+            while m < len(triangles[j].vertices):
                 vertex = triangles[j].vertices[m]
-                for k in range(3):
+                k = 0
+                while k < 3:
                     if point_splits_edge(vertex, triangles[i].vertices[k], triangles[i].vertices[(k + 1)%3]):
-                        triangles = triangles + split_triangle(triangle[i], (k + 2)%3, vertex)
+                        print("Split!")
+                        triangles = triangles + split_triangle(triangles[i], (k + 2)%3, vertex)
                         triangles.pop(i)
                         i = -1
                         j = len(triangles)
                         k = 4
                         m = 4
+                    k += 1
+                m += 1
             j += 1
         i += 1
     return
@@ -79,7 +85,7 @@ def main(argv):
 
     triangles = get_triangles_from_file(argv[1], 1.0)
 
-    #split_edge_points(triangles)
+    split_edge_points(triangles)
 
     save_triangles_to_file(triangles, argv[1])
 
