@@ -10,12 +10,13 @@ from unfolder import *
 def point_splits_edge(point, endpoint0, endpoint1, tolerance = .001):
     "Returns true if point is collinear to endpoints and in between them."
     vector = endpoint1.minus(endpoint0)
+    edge_length = vector.magnitude()
     rel_point = point.minus(endpoint0)
     # project rel_point onto the edge's unit vector
-    t = vector.dot_product(rel_point)/vector.magnitude()
-    if t != rel_point.magnitude():
+    t = vector.dot_product(rel_point)/edge_length
+    if abs(t - rel_point.magnitude()) > tolerance:
         return False
-    if t > tolerance and t < 1.0 - tolerance:
+    if t > tolerance*edge_length and t < edge_length*(1.0 - tolerance):
         return True
     return False
 
@@ -28,27 +29,17 @@ def split_triangle(triangle, edge, point):
 def split_edge_points(triangles):
     "Finds triangles whose edges contain vertices somewhere other than their endpoints and splits them at those vertices."
     # adding new triangles won't create new vertices, so we don't have to re-check old ones if we're smart about it
-    i = 0
-    while i < len(triangles):
-        j = i + 1
-        while j < len(triangles):
-            m = 0
-            while m < len(triangles[j].vertices):
-                vertex = triangles[j].vertices[m]
-                k = 0
-                while k < 3:
-                    if point_splits_edge(vertex, triangles[i].vertices[k], triangles[i].vertices[(k + 1)%3]):
+    for splitter in triangles:
+        for i, split in enumerate(triangles):
+            for corner in splitter.vertices:
+                for edge in range(len(split.vertices)):
+                    if point_splits_edge(corner, split.vertices[(edge + 1)%3], split.vertices[(edge + 2)%3]):
                         print("Split!")
-                        triangles = triangles + split_triangle(triangles[i], (k + 2)%3, vertex)
+                        children = split_triangle(split, edge, corner)
+                        triangles.append(children[0])
+                        triangles.append(children[1])
                         triangles.pop(i)
-                        i = -1
-                        j = len(triangles)
-                        k = 4
-                        m = 4
-                    k += 1
-                m += 1
-            j += 1
-        i += 1
+                        return split_edge_points(triangles)
     return
 
 
