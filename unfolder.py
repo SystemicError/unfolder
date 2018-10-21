@@ -216,13 +216,26 @@ def rotate_triangles_to_plane(triangles, max_polygon_size):
                     self_index = neighbor.get_neighbor_index(triangle)
                     neighbor.align_to_neighbor(self_index)
                     neighbor.visited = True
-                    if not overlap(neighbor, polygon) and len(polygon) < max_polygon_size:
+                    if not overlap(neighbor, polygon) and len(polygon) < max_polygon_size and fits_in_page(polygon + [neighbor]):
                         polygon.append(neighbor)
                         new_frontier.append(neighbor)
         frontier = new_frontier
 
 
     return [polygon] + rotate_triangles_to_plane([t for t in triangles if not (t in polygon)], max_polygon_size)
+
+def fits_in_page(polygon):
+    "Returns True if polygon width/height are within PX_WIDTH and PX_HEIGHT."
+    xmin = min([min([v.x for v in t.vertices]) for t in polygon])
+    xmax = max([max([v.x for v in t.vertices]) for t in polygon])
+    ymin = min([min([v.y for v in t.vertices]) for t in polygon])
+    ymax = max([max([v.y for v in t.vertices]) for t in polygon])
+    if xmax - xmin > PX_WIDTH:
+        return False
+    if ymax - ymin > PX_HEIGHT:
+        return False
+    # We're in trouble if a single triangle doesn't fit
+    return True
 
 def overlap(triangle, polygon):
     "Returns true if triangle in its current position overlaps polygon."
@@ -407,10 +420,10 @@ def main(argv):
     print(". . . rotation to plane complete.  Created " + str(len(polygons)) + " polygonal partitions.")
 
     for triangles in polygons:
-        draw_template(cr, triangles, False)
-        path = "unfolded_" + "{:03d}".format(polygons.index(triangles)) + ".png"
-        print("Rendering polygon " + str(polygons.index(triangles)) + " . . .")
-        surface.write_to_png(path)
+        #draw_template(cr, triangles, False)
+        #path = "unfolded_" + "{:03d}".format(polygons.index(triangles)) + ".png"
+        #print("Rendering polygon " + str(polygons.index(triangles)) + " . . .")
+        #surface.write_to_png(path)
         draw_template(cr, triangles, True)
         path = "hints_" + "{:03d}".format(polygons.index(triangles)) + ".png"
         print("Rendering hint sheet " + str(polygons.index(triangles)) + " . . .")
