@@ -196,14 +196,12 @@ def rotate_triangles_to_plane(triangles, max_polygon_size):
         return []
     for t in triangles:
         t.visited = False
-    # starting with triangles[0] as seed, use breadth-first web traversal
-    # and flatten into plane
 
-    # place the seed triangle on the plane
+    # place all triangles on the plane
     for t in triangles:
         t.flatten()
 
-    # recur on its unvisited neighbors
+    # starting with random seed, use breadth-first web traversal
     selection = random.randint(0, len(triangles) - 1)
     triangles[selection].visited = True
     frontier = [triangles[selection]]
@@ -223,6 +221,19 @@ def rotate_triangles_to_plane(triangles, max_polygon_size):
 
 
     return [polygon] + rotate_triangles_to_plane([t for t in triangles if not (t in polygon)], max_polygon_size)
+
+def triangle_to_face(triangle):
+    "Returns a list of all triangles that are coplanar neighbors to given triangle."
+    neighborhood = [triangle]
+    finished = False
+    while not finished:
+        finished = True
+        for tri in neighborhood:
+            for i in range(3):
+                if tri.folds[i] == 0 and not tri.neighbors[i] in neighborhood:
+                    neighborhood.append(tri.neighbors[i])
+                    finished = False
+    return neighborhood
 
 def fits_in_page(polygon):
     "Returns True if polygon width/height are within PX_WIDTH and PX_HEIGHT."
