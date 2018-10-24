@@ -203,16 +203,8 @@ def rotate_triangles_to_plane(triangles, max_polygon_size):
 
     # starting with random seed, use breadth-first web traversal
     selection = random.randint(0, len(triangles) - 1)
-    print("Selected triangle " + str(selection))
-    print(str(triangles[selection]))
     face = triangle_to_face(triangles[selection])
-    print("Face is:")
-    for t in face:
-        print(str(t))
     align_face(triangles[selection])
-    print("Aligned face is:")
-    for t in face:
-        print(str(t))
     for triangle in face:
         triangle.visited = True
     frontier = face
@@ -308,7 +300,7 @@ def draw_triangle(cr, center, triangle, needs_hints):
         elif triangle.folds[(i+1)%3] < 0:
             r, g, b = 0.0, 0.0, 1.0
         else:
-            r, g, b = 0, 0, 0
+            r, g, b = .8, .8, .8
         cr.set_source_rgb(r, g, b)
         cr.move_to(x[(i + 2)%3], y[(i + 2)%3])
         cr.line_to(x[i%3], y[i%3])
