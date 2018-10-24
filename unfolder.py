@@ -203,9 +203,20 @@ def rotate_triangles_to_plane(triangles, max_polygon_size):
 
     # starting with random seed, use breadth-first web traversal
     selection = random.randint(0, len(triangles) - 1)
-    triangles[selection].visited = True
-    frontier = [triangles[selection]]
-    polygon = [triangles[selection]]
+    print("Selected triangle " + str(selection))
+    print(str(triangles[selection]))
+    face = triangle_to_face(triangles[selection])
+    print("Face is:")
+    for t in face:
+        print(str(t))
+    align_face(triangles[selection])
+    print("Aligned face is:")
+    for t in face:
+        print(str(t))
+    for triangle in face:
+        triangle.visited = True
+    frontier = face
+    polygon = face
     while len(frontier) > 0:
         new_frontier = []
         for triangle in frontier:
@@ -213,14 +224,36 @@ def rotate_triangles_to_plane(triangles, max_polygon_size):
                 if neighbor != None and neighbor.visited == False:
                     self_index = neighbor.get_neighbor_index(triangle)
                     neighbor.align_to_neighbor(self_index)
-                    neighbor.visited = True
-                    if not overlap(neighbor, polygon) and len(polygon) < max_polygon_size and fits_in_page(polygon + [neighbor]):
-                        polygon.append(neighbor)
-                        new_frontier.append(neighbor)
+                    align_face(neighbor)
+                    overlapping = False
+                    neighbor_face = triangle_to_face(neighbor)
+                    for t in neighbor_face:
+                        t.visited = True
+                        if overlap(t, polygon):
+                            overlapping = True
+                    if not overlapping and len(polygon) < max_polygon_size and fits_in_page(polygon + neighbor_face):
+                        polygon = polygon + neighbor_face
+                        new_frontier = new_frontier + neighbor_face
         frontier = new_frontier
 
-
     return [polygon] + rotate_triangles_to_plane([t for t in triangles if not (t in polygon)], max_polygon_size)
+
+def align_face(triangle):
+    "Aligns all coplanar neighbors of this (flattened) triangle to this triangle."
+    face = triangle_to_face(triangle)
+    frontier = [triangle]
+    visited = [triangle]
+    while len(frontier) > 0:
+        new_frontier = []
+        for tri in frontier:
+            for neighbor in tri.neighbors:
+                if neighbor != None and not neighbor in visited and neighbor in face:
+                    self_index = neighbor.get_neighbor_index(tri)
+                    neighbor.align_to_neighbor(self_index)
+                    visited.append(neighbor)
+                    new_frontier.append(neighbor)
+        frontier = new_frontier
+    return
 
 def triangle_to_face(triangle):
     "Returns a list of all triangles that are coplanar neighbors to given triangle."
